@@ -1,4 +1,7 @@
-all: SampleArcLenCF.xml CurvatureStreamlinesCF.xml JoinStreamlinesCF.xml OrientedGlyphCF.xml SampleSurfaceCF.xml MetropolisHastingsCF.xml  SampleStreamlinesInTime.xml
+all: SampleArcLenCF.xml CurvatureStreamlinesCF.xml JoinStreamlinesCF.xml OrientedGlyphCF.xml SampleSurfaceCF.xml MetropolisHastingsCF.xml  SampleStreamlinesInTime.xml TrimStreamlinesCF.xml
+
+TrimStreamlinesCF.xml: TrimStreamlinesCF.py
+	python python_filter_generator.py TrimStreamlinesCF.py TrimStreamlinesCF.xml
 
 SampleStreamlinesInTime.xml: SampleStreamlinesInTime.py
 	python python_filter_generator.py SampleStreamlinesInTime.py SampleStreamlinesInTime.xml

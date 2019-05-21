@@ -17,8 +17,6 @@ zscale = 1.0
 )
 
 def RequestData():
-  print 'here'
-
   import numpy as np
   from vtk.numpy_interface import dataset_adapter as dsa
   from vtk.util import numpy_support as ns
@@ -26,16 +24,12 @@ def RequestData():
   ipoints = inputs[0]
   number_of_glyphs = ipoints.GetNumberOfPoints()
 
-  print 'nG:', number_of_glyphs
-
   glyph = inputs[1]
-  glyph_points = [scale*xscale, scale*yscale, scale*zscale] * glyph.Points
-  glyph_polygons = glyph.Cells.reshape((-1,4))
 
-  print 'nP:', inputs[1].GetNumberOfPoints()
-
+  glyph_points     = [scale*xscale, scale*yscale, scale*zscale] * glyph.Points
   points_per_glyph = glyph_points.shape[0]
-  triangles_per_glyph = glyph_polygons.shape[0]
+
+  cells_per_glyph  = len(glyph.CellTypes)
 
   if forward not in ipoints.PointData.keys():
     print 'can\'t find forward array'
@@ -66,43 +60,53 @@ def RequestData():
   w = W[0]
 
   opoints = []
-  opolys = []
-
-  iDataArrays = []
-  oDataArrays = []
-  print '111'
-  for i,k in enumerate(ipoints.PointData.keys()):
-    print i, k
-    iDataArrays.append(ipoints.PointData[k])
-    oDataArrays.append([])
-  print '222'
-
   for i,p,u,v,w in zip(range(len(P)), P, U, V, W):
-    new_points = p + glyph_points[:,0][:,np.newaxis]*u + glyph_points[:,1][:,np.newaxis]*v + glyph_points[:,2][:,np.newaxis]*w 
-    new_polys  = glyph_polygons + [0, i*points_per_glyph, i*points_per_glyph, i*points_per_glyph]
-    opoints.append(new_points)
-    opolys.append(new_polys)
-    for id,od in zip(iDataArrays, oDataArrays):
-       od.append([id[i]]*points_per_glyph)
+    opoints.append(p + glyph_points[:,0][:,np.newaxis]*u + glyph_points[:,1][:,np.newaxis]*v + glyph_points[:,2][:,np.newaxis]*w)
+
+  print "Cells", glyph.Cells
+
+  opolys = [glyph.Cells]
+  for i in range(1, len(P)):
+    o = np.zeros(len(glyph.Cells))
+    k = 0
+    for j in range(len(glyph.Cells)):
+      if k == 0:
+        k = glyph.Cells[j]
+        o[j] = k
+      else:
+        k = k - 1
+        o[j] = glyph.Cells[j] + i*points_per_glyph
+    opolys.append(o)
 
   opoints = dsa.numpyTovtkDataArray(np.vstack(opoints))
-  opolys = ns.numpy_to_vtkIdTypeArray(np.ascontiguousarray(np.vstack(opolys).flatten()))
+
+  print '44', opolys
 
   ids = [np.array([i]*points_per_glyph) for i in range(len(P))]
   ids = dsa.numpyTovtkDataArray(np.vstack(ids).flatten(), name='ID')
 
   print 'AAAAAAA'
+
   oug = self.GetUnstructuredGridOutput()
 
   pts = vtk.vtkPoints()
   pts.SetData(opoints)
   oug.SetPoints(pts)
 
-  ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_TRIANGLE]*triangles_per_glyph*number_of_glyphs).astype('u1'))
-  co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.arange(0, 4*triangles_per_glyph*number_of_glyphs, 4))
+  ct = np.hstack([glyph.CellTypes for i in range(number_of_glyphs)])
+  co = np.hstack([glyph.CellLocations + i*len(glyph.Cells) for i in range(number_of_glyphs)])
+  opolys = np.hstack(opolys).astype('i8')
+
+  print 'CT', ct
+  print 'CO', co
+  print 'OP', opolys
+
+  ct = dsa.numpyTovtkDataArray(ct)
+  co = dsa.numpy_support.numpy_to_vtkIdTypeArray(co)
+  opolys = ns.numpy_to_vtkIdTypeArray(opolys)
 
   ca = vtk.vtkCellArray()
-  ca.SetCells(number_of_glyphs*triangles_per_glyph, opolys)
+  ca.SetCells(number_of_glyphs*cells_per_glyph, opolys)
 
   print 'BBBBBBBB'
   oug.SetCells(ct, co, ca)
@@ -110,7 +114,7 @@ def RequestData():
   print 'CCCCCCC'
 
   for i,n in enumerate(ipoints.PointData.keys()):
-    oug.GetPointData().AddArray(dsa.numpyTovtkDataArray(np.vstack(oDataArrays[i]).flatten(), name=n))
+    oug.GetPointData().AddArray(dsa.numpyTovtkDataArray(np.vstack([ipoints.PointData[n] for i in range(number_of_glyphs)]), name=n))
 
   print 'DDDDDDD'
   return

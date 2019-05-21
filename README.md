@@ -12,5 +12,7 @@ OrientedGlyph: Takes two inputs: a set of samples with at least two direction ve
 
 CurvatureStreamlines: Calculates local curvature in polylines.  Creates a curvature map using a downsampled version of the input polylines to avoid noise in almost-straight or oversampled sections.    Dot the result with the local up vector to get the direction that eddies are spinning.
 
+TrimStreamlines:  Trim a streamline to an interval of integration time, given by two properties.
+
 To use these, run 'Make' in the download directory.   This will invoke Kitware's 	python_filter_generator.py to create .xml files for each.   These can then be added to Paraview using Tools->Manage Plugins.
 
