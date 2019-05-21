@@ -8,7 +8,8 @@ OutputDataType = 'vtkUnstructuredGrid'
 ExtraXml = ''
 
 Properties = dict(
-t = 0.5
+t = 0.5,
+nt = 1
 )
 
 def RequestData():
@@ -19,14 +20,30 @@ def RequestData():
   sl = self.GetUnstructuredGridInput()
   nsl = dsa.WrapDataObject(sl)
 
-  print 'hello'
-  arclen = nsl.PointData['arclen']
+  itime = nsl.PointData['IntegrationTime']
 
   nv = nsl.Cells[nsl.CellLocations]    # number of verts in each line
   ns = nsl.CellLocations + 1           # index of first vertex in each line
   ne = ns + nv                         # index one past the last vertex
 
   lines = [nsl.Cells[i:j] for i,j in zip(ns, ne)] # divide into distinct lines
+
+  # Get length (in integration time) of longest line
+
+  mint = itime[lines[0][0]]
+  maxt = itime[lines[0][-1]]
+  maxlen = itime[lines[0][-1]] - itime[lines[0][0]]
+  if len(lines) > 1:
+    for i in range(1, len(lines)):
+      mt = itime[lines[i][-1]] - itime[lines[i][0]]
+      if mt > maxlen:
+        maxlen = mt;
+      if mint > itime[lines[i][0]]: mint = itime[lines[i][0]]
+      if maxt < itime[lines[i][-1]]: maxt = itime[lines[i][-1]]
+
+  # dt is the distance between samples in integration time - nt samples distributed along longest line
+
+  dt = (maxt - mint) / nt
 
   iarrays = {'points': nsl.Points}    # initialize source arrays with input points
   oarrays = {'points': []}            # initialize destination arrays with (empty) points
@@ -35,48 +52,40 @@ def RequestData():
     iarrays[n] = nsl.PointData[n]     # add input point data arrays to source arrays
     oarrays[n] = []                   # add empty destination arrays
 
-  for i,line in enumerate(lines):     # for each input line...
+  # for each sample time...
 
-    llen = arclen[line[-1]]
-    sample_x = t * llen               #   sample distance along line
+  for it in range(nt):
 
-    # print 'arclen', arclen[line]
-    # print 'sample_x', sample_x
+    sample_t = mint + (it + t) * dt
+    print 'sample_t:', sample_t
 
-    # index of first elt greater than sample_x (or 0, in which case we use the last)
+    for i,line in enumerate(lines):     # for each input line...
 
-    interval_end = np.argmax(arclen[line] > sample_x) 
-    if interval_end == 0: interval_end = len(line) - 1
+      # if this sample time is in the range for the current line...
 
-    # print 'interval_end', interval_end
+      if sample_t >= itime[line[0]] and sample_t <= itime[line[-1]]:
 
-    # get indices of points and point-dependent data at either end of the interval
-    starti = line[interval_end]
-    endi   = line[interval_end - 1]
+        # index of first elt greater than sample_x (or 0, in which case we use the last)
 
-    # print 'starti', starti, 'endi', endi
+        interval_end = np.argmax(itime[line] > sample_t) 
+        if interval_end == 0: interval_end = len(line) - 1
 
-    # interpolant value in interval
-    d = (sample_x - arclen[starti] / (arclen[endi] - arclen[starti]))  # interpolant in interval
+        # get indices of points and point-dependent data at either end of the interval
+        endi = line[interval_end]
+        starti = line[interval_end - 1]
 
-    for n in iarrays:                 #   for each array we are interpolating...
-      ia = iarrays[n]                 #     input array
-      sv = ia[starti]                 #     start values
-      ev = ia[endi]                   #     end values
-      v  = sv + d*(ev - sv)           #     interpolation
-      if n == 'points': 
-        print v
-      oarrays[n].append(v)
+        # interpolant value in interval
+        d = (sample_t - itime[starti]) / (itime[endi] - itime[starti])  # interpolant in interval
 
-  print 'AAA'
+        for n in iarrays:                 #   for each array we are interpolating...
+          ia = iarrays[n]                 #     input array
+          sv = ia[starti]                 #     start values
+          ev = ia[endi]                   #     end values
+          v  = sv + d*(ev - sv)           #     interpolation
+          oarrays[n].append(v)
 
   ptsa = np.concatenate(oarrays['points']).reshape((-1, 3)).astype('f4')
-
-  print 'BBB', oarrays['points'], ptsa, ptsa.shape
-
-  oug = self.GetUnstructuredGridOutput()
-
-  print 'CCCC'
+  oug = vtk.vtkUnstructuredGrid()
 
   op = vtk.vtkPoints()
   op.SetNumberOfPoints(ptsa.shape[0])
@@ -84,26 +93,23 @@ def RequestData():
   for i, p in enumerate(ptsa):
     op.InsertPoint(i, p[0], p[1], p[2])
 
-  print 'DDDD'
-
   oug.SetPoints(op)
-
   for n in oarrays:
     if n != 'points':
-      a = dsa.numpyTovtkDataArray(np.concatenate(oarrays[n]))
+      if oarrays[n][0].__class__ == dsa.VTKArray:
+        ncomp = len(oarrays[n][0])
+        a = dsa.numpyTovtkDataArray(np.concatenate(oarrays[n]).reshape((-1, ncomp)))
+      else:
+        a = dsa.numpyTovtkDataArray(oarrays[n])
       a.SetName(n)
       oug.GetPointData().AddArray(a)
 
-  print 'EEE'
-
   ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_VERTEX]*oug.GetNumberOfPoints()).astype('u1'))
   co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.array(range(0, 2*oug.GetNumberOfPoints(), 2)))
-
-  print 'FFFG'
 
   ca = vtk.vtkCellArray()
   for i in range(oug.GetNumberOfPoints()):
     ca.InsertNextCell(1, [i])
 
-  print 'GGG'
   oug.SetCells(ct, co, ca)
+  self.GetUnstructuredGridOutput().ShallowCopy(oug)
