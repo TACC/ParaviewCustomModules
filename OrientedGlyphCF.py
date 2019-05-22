@@ -13,7 +13,8 @@ up = 'Normals',
 scale = 1.0,
 xscale = 1.0,
 yscale = 1.0,
-zscale = 1.0
+zscale = 1.0,
+dbg = 999
 )
 
 def RequestData():
@@ -63,8 +64,6 @@ def RequestData():
   for i,p,u,v,w in zip(range(len(P)), P, U, V, W):
     opoints.append(p + glyph_points[:,0][:,np.newaxis]*u + glyph_points[:,1][:,np.newaxis]*v + glyph_points[:,2][:,np.newaxis]*w)
 
-  print "Cells", glyph.Cells
-
   opolys = [glyph.Cells]
   for i in range(1, len(P)):
     o = np.zeros(len(glyph.Cells))
@@ -80,14 +79,10 @@ def RequestData():
 
   opoints = dsa.numpyTovtkDataArray(np.vstack(opoints))
 
-  print '44', opolys
-
   ids = [np.array([i]*points_per_glyph) for i in range(len(P))]
   ids = dsa.numpyTovtkDataArray(np.vstack(ids).flatten(), name='ID')
 
-  print 'AAAAAAA'
-
-  oug = self.GetUnstructuredGridOutput()
+  oug = vtk.vtkUnstructuredGrid()
 
   pts = vtk.vtkPoints()
   pts.SetData(opoints)
@@ -97,26 +92,84 @@ def RequestData():
   co = np.hstack([glyph.CellLocations + i*len(glyph.Cells) for i in range(number_of_glyphs)])
   opolys = np.hstack(opolys).astype('i8')
 
-  print 'CT', ct
-  print 'CO', co
-  print 'OP', opolys
+  # print '11111111'
+  # if dbg == 1:
+    # return
 
   ct = dsa.numpyTovtkDataArray(ct)
   co = dsa.numpy_support.numpy_to_vtkIdTypeArray(co)
   opolys = ns.numpy_to_vtkIdTypeArray(opolys)
+  # print 'XYXYXYXY'
+  # if dbg == 2:
+    # return
 
   ca = vtk.vtkCellArray()
   ca.SetCells(number_of_glyphs*cells_per_glyph, opolys)
 
-  print 'BBBBBBBB'
+  # print 'BBBBBBBB'
+  # if dbg == 3:
+    # return
+
   oug.SetCells(ct, co, ca)
   oug.GetPointData().AddArray(ids)
-  print 'CCCCCCC'
+  # print 'CCCCCCC'
+  # if dbg == 4:
+    # return
 
-  for i,n in enumerate(ipoints.PointData.keys()):
-    oug.GetPointData().AddArray(dsa.numpyTovtkDataArray(np.vstack([ipoints.PointData[n] for i in range(number_of_glyphs)]), name=n))
+  oug.GetPointData().AddArray(dsa.numpyTovtkDataArray(np.vstack([glyph.PointData['Normals'] for i in range(number_of_glyphs)]), name='Normals'))
 
-  print 'DDDDDDD'
+  for n in ipoints.PointData.keys():
+    if n != 'Normals':
+      a = [[ipoints.PointData[n][i]]*points_per_glyph for i in range(number_of_glyphs)]
+      oug.GetPointData().AddArray(dsa.numpyTovtkDataArray(np.concatenate(a), name=n))
+
+  # print 'DDDDDDDDDDDDDDDDDDDDDDDDDDD'
+  # print dir(self)
+  # print 'DDDDDDDDDDDDDDDDDDDDDDDDDDD'
+  # print self.GetUnstructuredGridOutput()
+  # print 'DDDDDDDDDDDDDDDDDDDDDDDDDDD'
+  self.GetUnstructuredGridOutput().Initialize()
+  # print self.GetUnstructuredGridOutput()
+  # print 'DDDDDDDDDDDDDDDDDDDDDDDDDDD'
+
+  # if dbg == 5:
+    # return
+
+
+  self.GetUnstructuredGridOutput().ShallowCopy(oug)
+  # print self.GetUnstructuredGridOutput()
+
   return
 
+
+if __name__ == '__main__':
+
+  class s:
+    def __init__(self, o):
+      from vtk import vtkUnstructuredGrid
+      self.outpt = vtkUnstructuredGrid()
+      self.outpt.DeepCopy(o.VTKObject)
+    def GetUnstructuredGridOutput(self):
+      return self.outpt
+
+  from vtk import *
+  from vtk.numpy_interface import dataset_adapter as dsa
+
+  inputs = []
+
+  prdr = vtkXMLUnstructuredGridReader()
+  prdr.SetFileName('/Users/gda/Glyphs/points.vtu')
+  prdr.Update()
+  inputs.append(dsa.WrapDataObject(prdr.GetOutput()))
+
+  grdr = vtkXMLUnstructuredGridReader()
+  grdr.SetFileName('/Users/gda/Glyphs/bird2-small.vtu')
+  grdr.Update()
+  inputs.append(dsa.WrapDataObject(grdr.GetOutput()))
+
+  self = s(inputs[1])
+  locals().update(Properties)
+  eval('RequestData()', globals(), locals())
+  print '================================='
+  print self.GetUnstructuredGridOutput()
 
