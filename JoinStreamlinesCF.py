@@ -1,6 +1,6 @@
 Name = 'JoinStreamlines'
 Label = 'Join Streamlines'
-Help = 'Join forward and backward fragments of streamlines'
+Help = 'Join forward and backward fragments of streamlines.   Set flag to 0 to zero the integration time at the seed points, 1 to start each streamline at integrationTime = 0'
 
 NumberOfInputs = 1
 InputDataType = 'vtkPolyData'
@@ -8,6 +8,7 @@ OutputDataType = 'vtkUnstructuredGrid'
 ExtraXml = ''
 
 Properties = dict(
+  flag = 0
 )
 
 def RequestData():
@@ -17,7 +18,7 @@ def RequestData():
   sl = self.GetPolyDataInput()
   nsl = dsa.WrapDataObject(sl)
 
-  osl = self.GetUnstructuredGridOutput()
+  osl = vtk.vtkUnstructuredGrid()
 
   osl.SetPoints(sl.GetPoints())
   for i in range(sl.GetPointData().GetNumberOfArrays()):
@@ -36,7 +37,6 @@ def RequestData():
     return
 
   for indx, seed in enumerate(unique_sids):
-    print 'aa'
     parts = np.where(sids == seed)[0]
     sl.GetCellPoints(parts[0], idlists[0])
     w0 = [idlists[0].GetId(i) for i in range(idlists[0].GetNumberOfIds())]
@@ -46,6 +46,9 @@ def RequestData():
       nsl.PointData['Normals'][w1] = 0 - nsl.PointData['Normals'][w1]
       t0 = nsl.PointData['IntegrationTime'][w0[-1]]
       t1 = nsl.PointData['IntegrationTime'][w1[-1]]
+      # print 'seg 0', w0[0], nsl.PointData['IntegrationTime'][w0[0]], w0[-1], nsl.PointData['IntegrationTime'][w0[-1]]
+      # print 'seg 1', w1[0], nsl.PointData['IntegrationTime'][w1[0]], w1[-1], nsl.PointData['IntegrationTime'][w1[-1]]
+      # print '----------'
       if t0 > t1:
         tmin = t1
         ids = w1[::-1] + w0
@@ -53,9 +56,10 @@ def RequestData():
         tmin = t0
         nsl.PointData['Normals'][w0] = 0 - nsl.PointData['Normals'][w0]
         ids = w0[::-1] + w1
-      nsl.PointData['IntegrationTime'][ids]  = nsl.PointData['IntegrationTime'][ids] - tmin
     else:
       ids = w0
+    if flag:
+      nsl.PointData['IntegrationTime'][ids]  = nsl.PointData['IntegrationTime'][ids] - tmin
     polylines.append(ids)
     p = nsl.Points[ids]
     pv = p[1:] - p[:-1]
@@ -79,3 +83,5 @@ def RequestData():
   al = dsa.numpyTovtkDataArray(arclen.astype('f4'))
   al.SetName('arclen')
   osl.GetPointData().AddArray(al)
+
+  self.GetUnstructuredGridOutput().ShallowCopy(osl)
