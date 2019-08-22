@@ -118,9 +118,9 @@ def RequestData():
         i[2].append(value)
   
     def stuff_vtu(self, outpt):
-      outpt.SetPoints(dsa.VTKArray(self.points))
-      outpt.PointData.append(dsa.VTKArray(self.Q), 'Q')
-      outpt.PointData.append(dsa.VTKArray(self.I), 'I')
+      outpt.SetPoints(dsa.VTKArray(np.array(self.points).astype('f4')))
+      outpt.PointData.append(dsa.VTKArray(np.array(self.Q).astype('f4')), 'Q')
+      outpt.PointData.append(dsa.VTKArray(np.array(self.I).astype('f4')), 'I')
       ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_VERTEX]*outpt.GetNumberOfPoints()).astype('u1'))
       co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.array(range(0, 2*outpt.GetNumberOfPoints(), 2)))
       ca = vtk.vtkCellArray()
@@ -128,7 +128,7 @@ def RequestData():
         ca.InsertNextCell(1, [i])
       outpt.VTKObject.SetCells(ct, co, ca)
       for v in self.vars:
-        outpt.PointData.append(dsa.VTKArray(v[2]), v[0])
+        outpt.PointData.append(dsa.VTKArray(np.array(v[2]).astype('f4')), v[0])
 
   print 'arrayName', arrayName
   print 'target', target
