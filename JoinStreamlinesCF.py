@@ -53,7 +53,7 @@ def RequestData():
   idlists = [vtk.vtkIdList() for i in range(2)]
 
   if 'IntegrationTime' not in nsl.PointData.keys() or 'Normals' not in nsl.PointData.keys():
-    print "need integration time and Normals variables"
+    print("need integration time and Normals variables")
     return
 
   for indx, seed in enumerate(unique_sids):
@@ -66,9 +66,6 @@ def RequestData():
       nsl.PointData['Normals'][w1] = 0 - nsl.PointData['Normals'][w1]
       t0 = nsl.PointData['IntegrationTime'][w0[-1]]
       t1 = nsl.PointData['IntegrationTime'][w1[-1]]
-      # print 'seg 0', w0[0], nsl.PointData['IntegrationTime'][w0[0]], w0[-1], nsl.PointData['IntegrationTime'][w0[-1]]
-      # print 'seg 1', w1[0], nsl.PointData['IntegrationTime'][w1[0]], w1[-1], nsl.PointData['IntegrationTime'][w1[-1]]
-      # print '----------'
       if t0 > t1:
         tmin = t1
         ids = w1[::-1] + w0

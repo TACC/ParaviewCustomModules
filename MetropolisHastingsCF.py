@@ -114,7 +114,7 @@ def RequestData():
       for i in self.vars:
         value = I.Interpolate(p, i[1])
         if value == None:
-          print 'oops'
+          print('oops')
         i[2].append(value)
   
     def stuff_vtu(self, outpt):
@@ -130,23 +130,14 @@ def RequestData():
       for v in self.vars:
         outpt.PointData.append(dsa.VTKArray(np.array(v[2]).astype('f4')), v[0])
 
-  print 'arrayName', arrayName
-  print 'target', target
-  print 'foo', kernelwidth, asscale
-
-  print 'inputs[0]', inputs[0].PointData.keys()
-  print 'inputs[1]', inputs[1].PointData.keys()
-
   volume = inputs[0]
   
-  print 'start'
+  print('start')
 
   mx,MX,my,MY,mz,MZ = volume.VTKObject.GetBounds()
   ll = np.array([mx,my,mz])
   ur = np.array([MX,MY,MZ])
   diagonal = ur - ll
-
-  print 'aa', diagonal
 
   if len(inputs) > 1:
     points = inputs[1].GetPoints()
@@ -163,13 +154,11 @@ def RequestData():
   elif volume.VTKObject.IsA('vtkUnstructuredGrid'):
     is_vtu = True
   else:
-    print 'wha?'
+    print('wha?')
     return
 
-  print 'bb'
-
   if arrayName == "" and len(volume.PointData.keys()) > 1:
-    print 'need to know what variable to operate on'
+    print('need to know what variable to operate on')
     return 
 
   if arrayName == -1:
@@ -177,8 +166,8 @@ def RequestData():
   elif arrayName in volume.PointData.keys():
     array = volume.PointData[arrayName]
   else:
-    print 'can\'t find requested data array:', arrayName
-    print volume.PointData.keys()
+    print('can\'t find requested data array:', arrayName)
+    print(volume.PointData.keys())
     return 
 
   if target == 99999.0:
@@ -220,8 +209,6 @@ def RequestData():
   current_points = []
   current_pqs = []
 
-  print 'dd'
-
   indx = 0
   for i, p in enumerate(points):
     if interp.Locate(p):
@@ -236,41 +223,33 @@ def RequestData():
   current_points = list(initial_points)
   current_pqs = list(initial_pqs)
 
-  print 'ee'
-
   misses = [0]*len(initial_points)
 
   done = False
   indx = 0
 
-  print 'ff'
-
   while not done and samples.num() < nsamples:
-    print samples.num(), indx
+    print(samples.num(), indx)
     if misses[indx] >= nmisses:
-      print 'g'
       misses[indx] = 0
       current_points[indx] = initial_points[indx]
       current_pqs[indx] = initial_pqs[indx]
-    print 'h'
     cpoint = current_points[indx] + np.random.normal(loc=0.0, scale=asscale, size=3)
     cv = interp.Interpolate(cpoint, array)
     cq = map(cv)
-    print 'i'
     if cq > 0.0:
       if cq >= current_pqs[indx]:
         samples.add(interp, cpoint, cq, indx)
-        print indx, samples.num()
+        print(indx, samples.num())
         misses[indx] = 0
       else:
         u = np.random.rand()
         if u < cq/current_pqs[indx]:
           samples.add(interp, cpoint, cq, indx)
-          print indx, samples.num()
+          print(indx, samples.num())
           misses[indx] = 0
     else:
         misses[indx] = misses[indx] + 1
-    print 'j'
     current_points[indx] = list(cpoint)
     current_pqs[indx] = cq
     indx = indx + 1

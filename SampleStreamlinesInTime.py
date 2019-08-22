@@ -37,18 +37,21 @@ def RequestData():
   from vtk.numpy_interface import dataset_adapter as dsa
   from math import ceil, floor
 
-  sl = self.GetUnstructuredGridInput()
-  nsl = dsa.WrapDataObject(sl)
+  sl = self.GetUnstructuredGridInput()    # The streamlines
+  nsl = dsa.WrapDataObject(sl)            # wrap with a Python interface
 
-  itime = nsl.PointData['IntegrationTime']
+  itime = nsl.PointData['IntegrationTime']  # the time component of the streamlines
 
   nv = nsl.Cells[nsl.CellLocations]    # number of verts in each line
   ns = nsl.CellLocations + 1           # index of first vertex in each line
   ne = ns + nv                         # index one past the last vertex
 
   lines = [nsl.Cells[i:j] for i,j in zip(ns, ne)] # divide into distinct lines
+                                                  # lines[i] is a list of the ids of the
+                                                  # vertices that comprise each streamline
 
-  # Get length (in integration time) of longest line
+  # Get length (in integration time) of longest line.   Note - this assumes that the 
+  # forward- and backward- integrations are combined into one streamline (see JoinStreamlines)
 
   mint = itime[lines[0][0]]
   maxt = itime[lines[0][-1]]
@@ -65,19 +68,20 @@ def RequestData():
 
   dt = (maxt - mint) / nt
 
+  # destination arrays for streamline points and any point-dependent data - eg. orientation data
+
   iarrays = {'points': nsl.Points}    # initialize source arrays with input points
   oarrays = {'points': []}            # initialize destination arrays with (empty) points
 
   for n in nsl.PointData.keys():      
     iarrays[n] = nsl.PointData[n]     # add input point data arrays to source arrays
-    oarrays[n] = []                   # add empty destination arrays
+    oarrays[n] = []                   # add empty destination arrays 
 
   # for each sample time...
 
   for it in range(nt):
 
-    sample_t = mint + (it + t) * dt
-    print 'sample_t:', sample_t
+    sample_t = mint + (it + t) * dt     # the point in time to interpolate at
 
     for i,line in enumerate(lines):     # for each input line...
 
@@ -87,7 +91,7 @@ def RequestData():
 
         # index of first elt greater than sample_x (or 0, in which case we use the last)
 
-        interval_end = np.argmax(itime[line] > sample_t) 
+        interval_end = np.argmax(itime[line] > sample_t)      # linear search?
         if interval_end == 0: interval_end = len(line) - 1
 
         # get indices of points and point-dependent data at either end of the interval
@@ -104,6 +108,8 @@ def RequestData():
           v  = sv + d*(ev - sv)           #     interpolation
           oarrays[n].append(v)
 
+  # create an output vtkUnstructured data with the interpolated points and data
+
   ptsa = np.concatenate(oarrays['points']).reshape((-1, 3)).astype('f4')
   oug = vtk.vtkUnstructuredGrid()
 
@@ -113,7 +119,9 @@ def RequestData():
   for i, p in enumerate(ptsa):
     op.InsertPoint(i, p[0], p[1], p[2])
 
+
   oug.SetPoints(op)
+
   for n in oarrays:
     if n != 'points':
       if oarrays[n][0].__class__ == dsa.VTKArray:
@@ -132,4 +140,5 @@ def RequestData():
     ca.InsertNextCell(1, [i])
 
   oug.SetCells(ct, co, ca)
+
   self.GetUnstructuredGridOutput().ShallowCopy(oug)
