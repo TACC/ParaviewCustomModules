@@ -1,3 +1,4 @@
+
 ## ========================================================================== ##
 ## Copyright (c) 2019 The University of Texas at Austin.                      ##
 ## All rights reserved.                                                       ##
@@ -18,28 +19,43 @@
 ##                                                                            ##
 ## ========================================================================== ##
 
-all: SampleArcLenCF.xml CurvatureStreamlinesCF.xml JoinStreamlinesCF.xml OrientedGlyphCF.xml SampleSurfaceCF.xml MetropolisHastingsCF.xml  SampleStreamlinesInTime.xml TrimStreamlinesCF.xml 
+all: SampleArcLenCF.xml CurvatureStreamlinesCF.xml JoinStreamlinesCF.xml OrientedGlyphCF.xml SampleSurfaceCF.xml MetropolisHastingsCF.xml  SampleStreamlinesInTime.xml TrimStreamlinesCF.xml MH.xml MH2.xml MH3.xml DecimateStreamlines.xml MH4.xml
+
+DecimateStreamlines.xml: DecimateStreamlines.py
+	python2 python_filter_generator.py DecimateStreamlines.py DecimateStreamlines.xml
 
 TrimStreamlinesCF.xml: TrimStreamlinesCF.py
-	python python_filter_generator.py TrimStreamlinesCF.py TrimStreamlinesCF.xml
+	python2 python_filter_generator.py TrimStreamlinesCF.py TrimStreamlinesCF.xml
 
 SampleStreamlinesInTime.xml: SampleStreamlinesInTime.py
-	python python_filter_generator.py SampleStreamlinesInTime.py SampleStreamlinesInTime.xml
+	python2 python_filter_generator.py SampleStreamlinesInTime.py SampleStreamlinesInTime.xml
 
 MetropolisHastingsCF.xml: MetropolisHastingsCF.py
-	python python_filter_generator.py MetropolisHastingsCF.py MetropolisHastingsCF.xml
+	python2 python_filter_generator.py MetropolisHastingsCF.py MetropolisHastingsCF.xml
+
+MH.xml: MH.py
+	python2 python_filter_generator.py MH.py MH.xml
+
+MH2.xml: MH2.py
+	python2 python_filter_generator.py MH2.py MH2.xml
+
+MH3.xml: MH3.py
+	python2 python_filter_generator.py MH3.py MH3.xml
+
+MH4.xml: MH4.py
+	python2 python_filter_generator.py MH4.py MH4.xml
 
 OrientedGlyphCF.xml: OrientedGlyphCF.py
-	python python_filter_generator.py OrientedGlyphCF.py OrientedGlyphCF.xml
+	python2 python_filter_generator.py OrientedGlyphCF.py OrientedGlyphCF.xml
 
 JoinStreamlinesCF.xml: JoinStreamlinesCF.py
-	python python_filter_generator.py JoinStreamlinesCF.py JoinStreamlinesCF.xml
+	python2 python_filter_generator.py JoinStreamlinesCF.py JoinStreamlinesCF.xml
 
 SampleArcLenCF.xml: SampleArcLenCF.py
-	python python_filter_generator.py SampleArcLenCF.py SampleArcLenCF.xml
+	python2 python_filter_generator.py SampleArcLenCF.py SampleArcLenCF.xml
 
 CurvatureStreamlinesCF.xml: CurvatureStreamlinesCF.py
-	python python_filter_generator.py CurvatureStreamlinesCF.py CurvatureStreamlinesCF.xml
+	python2 python_filter_generator.py CurvatureStreamlinesCF.py CurvatureStreamlinesCF.xml
 
 SampleSurfaceCF.xml: SampleSurfaceCF.py
-	python python_filter_generator.py SampleSurfaceCF.py SampleSurfaceCF.xml
+	python2 python_filter_generator.py SampleSurfaceCF.py SampleSurfaceCF.xml
