@@ -35,7 +35,7 @@ Properties = dict(
   kernelwidth = 10.0,
   nmisses = 1000,
   nsamples = 1000,
-  power = 10,
+  power = 1.0,
   target = 99999.0,
   sscale = 100,
   asscale = -1
@@ -47,6 +47,8 @@ def RequestData():
   import random
   import numpy as np
   from vtk.numpy_interface import dataset_adapter as dsa
+
+  np.random.seed(12345)
 
   class Interpolator:
   
@@ -100,6 +102,7 @@ def RequestData():
       self.points = []
       self.vars = []
       self.I = []
+      self.V = []
       self.Q = []
       for i in dset.PointData.keys():
         self.vars.append([i, dset.PointData[i], []])
@@ -107,10 +110,11 @@ def RequestData():
     def num(self):
       return len(self.points)
   
-    def add(self, I, p, q, i):
+    def add(self, I, p, v, q, i):
       self.points.append(p)
+      self.V.append(v)
       self.Q.append(q)
-      self.I.append(q)
+      self.I.append(i)
       for i in self.vars:
         value = I.Interpolate(p, i[1])
         if value == None:
@@ -119,6 +123,7 @@ def RequestData():
   
     def stuff_vtu(self, outpt):
       outpt.SetPoints(dsa.VTKArray(np.array(self.points).astype('f4')))
+      outpt.PointData.append(dsa.VTKArray(np.array(self.V).astype('f4')), 'V')
       outpt.PointData.append(dsa.VTKArray(np.array(self.Q).astype('f4')), 'Q')
       outpt.PointData.append(dsa.VTKArray(np.array(self.I).astype('f4')), 'I')
       ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_VERTEX]*outpt.GetNumberOfPoints()).astype('u1'))
@@ -163,6 +168,7 @@ def RequestData():
 
   if arrayName == -1:
     array = volume.GetPointData().GetArray(0)
+    arrayName = "none"
   elif arrayName in volume.PointData.keys():
     array = volume.PointData[arrayName]
   else:
@@ -173,24 +179,25 @@ def RequestData():
   if target == 99999.0:
     mv = np.min(array)
     MV = np.max(array)
-    target = (mv + MV) / 2.0
+    # target = (mv + MV) / 2.0
+    target = MV
 
   if allabove:
-    def map(a):
+    def P(a):
       if a == None: return 0.0
       if a > target: return 1.0
       d = target - a
       if d > kernelwidth: return 0.0
       else: return pow(1.0 - (d / kernelwidth), power)
   elif allbelow:
-    def map(a):
+    def P(a):
       if a == None: return 0.0
       if a < target: return 1.0
       d = a - target
       if d > kernelwidth: return 0.0
       else: return pow(1.0 - (d / kernelwidth), power)
   else:
-    def map(a):
+    def P(a):
       if a == None: 
         return 0.0
       d = target - a
@@ -213,12 +220,23 @@ def RequestData():
   for i, p in enumerate(points):
     if interp.Locate(p):
       v = interp.Interpolate(p, array)
-      q = map(v)
+      q = P(v)
       if q > 0.0:
         initial_points.append(p)
         initial_pqs.append(q)
-        samples.add(interp, p, q, indx)
-        indx = indx + 1
+        # samples.add(interp, p, v, q, indx)
+        # indx = indx + 1
+
+  if len(initial_points) == 0:
+    pqs = np.vectorize(P)(array)
+    selectors = np.vectorize(lambda x: x > 0.9)(pqs)
+    initial_points = volume.GetPoints()[selectors]
+    initial_pqs = pqs[selectors]
+    # for (p, v) in zip(initial_points, initial_pqs):
+      # samples.add(interp, p, v, q, indx)
+      # indx = indx + 1
+
+  print(arrayName, " initial points: ", len(initial_points))
 
   current_points = list(initial_points)
   current_pqs = list(initial_pqs)
@@ -228,28 +246,30 @@ def RequestData():
   done = False
   indx = 0
 
+  loop_count = 0
   while not done and samples.num() < nsamples:
-    print(samples.num(), indx)
+    loop_count = loop_count + 1
+    if loop_count > 100000:
+      print("broke on total loop count")
+      done = True
     if misses[indx] >= nmisses:
       misses[indx] = 0
       current_points[indx] = initial_points[indx]
       current_pqs[indx] = initial_pqs[indx]
     cpoint = current_points[indx] + np.random.normal(loc=0.0, scale=asscale, size=3)
     cv = interp.Interpolate(cpoint, array)
-    cq = map(cv)
+    cq = P(cv)
     if cq > 0.0:
       if cq >= current_pqs[indx]:
-        samples.add(interp, cpoint, cq, indx)
-        print(indx, samples.num())
+        samples.add(interp, cpoint, cv, cq, indx)
         misses[indx] = 0
       else:
         u = np.random.rand()
         if u < cq/current_pqs[indx]:
-          samples.add(interp, cpoint, cq, indx)
-          print(indx, samples.num())
+          samples.add(interp, cpoint, cv, cq, indx)
           misses[indx] = 0
-    else:
-        misses[indx] = misses[indx] + 1
+        else:
+          misses[indx] = misses[indx] + 1
     current_points[indx] = list(cpoint)
     current_pqs[indx] = cq
     indx = indx + 1
