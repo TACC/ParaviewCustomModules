@@ -87,9 +87,7 @@ def RequestData():
     crosses = np.concatenate(([crosses[0]], crosses, [crosses[-1]]))
     crosses = np.column_stack([np.interp(line_arclen, samples, crosses[:,i]) for i in range(3)])
     binorm = 0.5 * (vectors[1:] - vectors[:-1])
-    # print(indx, len(vectors), vectors[:10])
-    # print(indx, len(binorm), binorm[:10])
-    # binorm = np.concatenate(([binorm[0]], binorm, [binorm[-1]]))
+    binorm = np.concatenate(([binorm[0]], binorm, [binorm[-1]]))
     binorm = np.column_stack([np.interp(line_arclen, samples, binorm[:,i]) for i in range(3)])
     binormal[line] = binorm
     curvature[line] = crosses
