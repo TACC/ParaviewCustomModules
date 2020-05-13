@@ -1,0 +1,31 @@
+This directory contains a "plugin" to sample volumetric datasets proportionally to 
+a scalar variable.  The variable has to be *cell-centered*.  The dataset has to be
+tetrahedral.
+
+This filter will normalize the designated variable to [0,1] - all 1, if the data is
+constant. For best results, transform the input so that the value if interest (which
+might not be the max) is mapped to 1, and down to 0 as a function of your interest.
+You can then raise the result to a power to further accentuate the desired value.
+
+As an example: if you want to sample an "isosurface" at a value k:
+
+left = k - min
+right = max - k
+
+pdf = 1 - abs(data - k)/max(left, right))
+
+or something like that.
+
+To build, go into the src directory and run:
+
+python setup.py build
+
+If all goes well, you will find a .so shared lib somewhere under the build subdir.
+Copy that file to ~/python/_sample.so
+
+Then, if you are using Paraview 5.6 load the SampleDensity.xml file as a plugin.  If
+5.8, use SampleDensity.py.   Note that in 5.6 it will offer all variables to you; use 
+only cell-centered ones.
+
+There are demo PVSMs for use with 5.6 and 5.8
+

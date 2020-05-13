@@ -19,10 +19,13 @@
 ##                                                                            ##
 ## ========================================================================== ##
 
-all: SampleArcLenCF.xml CurvatureStreamlinesCF.xml JoinStreamlinesCF.xml OrientedGlyphCF.xml SampleSurfaceCF.xml MetropolisHastingsCF.xml  SampleStreamlinesInTime.xml TrimStreamlinesCF.xml MH.xml MH2.xml MH3.xml DecimateStreamlines.xml MH4.xml
+all: SampleArcLenCF.xml CurvatureStreamlinesCF.xml JoinStreamlinesCF.xml OrientedGlyphCF.xml SampleSurfaceCF.xml MetropolisHastingsCF.xml  SampleStreamlinesInTime.xml TrimStreamlinesCF.xml MH.xml MH2.xml MH3.xml DecimateStreamlines.xml MH4.xml PDF.xml
 
 DecimateStreamlines.xml: DecimateStreamlines.py
 	python2 python_filter_generator.py DecimateStreamlines.py DecimateStreamlines.xml
+
+PDF.xml: PDF.py
+	python2 python_filter_generator.py PDF.py PDF.xml
 
 TrimStreamlinesCF.xml: TrimStreamlinesCF.py
 	python2 python_filter_generator.py TrimStreamlinesCF.py TrimStreamlinesCF.xml

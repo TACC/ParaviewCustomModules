@@ -1,0 +1,78 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="SampleDensity" class="vtkPythonProgrammableFilter" label="SampleDensity">
+
+      <Documentation
+        long_help=""
+        short_help="">
+      </Documentation>
+
+
+      <InputProperty
+        name="Input"
+        command="SetInputConnection">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+           <DataTypeDomain name="input_type">
+  <DataType value="vtkUnstructuredGrid"/>
+</DataTypeDomain>
+      </InputProperty>
+
+
+      <IntVectorProperty
+        name="nSamples"
+        label="nSamples"
+        initial_string="nSamples"
+        command="SetParameter"
+        animateable="1"
+        default_values="10000"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="pdf"
+        label="pdf"
+        initial_string="pdf"
+        command="SetParameter"
+        animateable="1"
+        default_values="PDF"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </StringVectorProperty>
+
+
+
+
+      <!-- Output data type: "vtkUnstructuredGrid" -->
+      <IntVectorProperty command="SetOutputDataSetType"
+                         default_values="4"
+                         name="OutputDataSetType"
+                         number_of_elements="1"
+                         panel_visibility="never">
+        <Documentation>The value of this property determines the dataset type
+        for the output of the programmable filter.</Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="Script"
+        command="SetScript"
+        number_of_elements="1"
+        default_values="import sys, os&#xA;import vtk&#xA;from vtk.numpy_interface import dataset_adapter as dsa&#xA;import ctypes as C&#xA;import numpy as np&#xA;&#xA;if 'HOME' in os.environ:&#xA;  ccode_so = os.environ['HOME'] + '/python/_sample.so'&#xA;elif 'HOMEPATH' in os.environ:&#xA;  ccode_so = os.environ['HOMEPATH'] + '/python/_sample.so'&#xA;else:&#xA;  ccode_so = '_sample.so'&#xA;&#xA;if not os.path.isfile(ccode_so):&#xA;  print('can\'t find so:', ccode_so)&#xA;  return&#xA;&#xA;ccode = C.CDLL(ccode_so)&#xA;&#xA;if not ccode:&#xA;  print('failed to load ', ccode.so)&#xA;  return&#xA;&#xA;info = self.GetInformation()&#xA;a = info.Get(self.INPUT_ARRAYS_TO_PROCESS())&#xA;if a:&#xA;  b = a.GetInformationObject(0)&#xA;  pdf = b.Get(inputs[0].VTKObject.FIELD_NAME())&#xA;&#xA;print('pdf: ', pdf, 'nSamples:', nSamples)   &#xA;&#xA;if pdf not in inputs[0].CellData.keys():&#xA;  print(&quot;PDF must be cell dependent!&quot;)&#xA;  return&#xA;&#xA;ccode = C.CDLL(ccode_so)&#xA;&#xA;if not ccode:&#xA;  print('failed to load ', ccode.so)&#xA;  return&#xA;&#xA;ccode.Sample.argtypes = [C.c_int, C.c_int, C.c_int,&#xA;                         np.ctypeslib.ndpointer(C.c_float, flags=&quot;C_CONTIGUOUS&quot;),&#xA;                         np.ctypeslib.ndpointer(C.c_float, flags=&quot;C_CONTIGUOUS&quot;),&#xA;                         np.ctypeslib.ndpointer(C.c_int, flags=&quot;C_CONTIGUOUS&quot;)]&#xA;&#xA;ccode.GetNumberOfSamples.restype = C.c_int&#xA;ccode.GetSamples.restype = C.c_void_p&#xA;&#xA;inpt = inputs[0]&#xA;&#xA;points = np.ascontiguousarray(inpt.Points).astype('f4')&#xA;pdf    = np.ascontiguousarray(inpt.CellData[pdf]).astype('f4')&#xA;tets   = np.ascontiguousarray(inpt.Cells).astype('i4')&#xA;ccode.Sample(nSamples, inpt.GetNumberOfPoints(), inpt.GetNumberOfCells(), points, pdf, tets)&#xA;n = ccode.GetNumberOfSamples()&#xA;s = np.ctypeslib.as_array(C.cast(ccode.GetSamples(), C.POINTER(C.c_float)),shape=(n, 3))&#xA;samples = dsa.WrapDataObject(vtk.vtkUnstructuredGrid())&#xA;co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.arange(n).astype('i8')*2)&#xA;ca = vtk.vtkCellArray()&#xA;ca.SetCells(n, dsa.numpy_support.numpy_to_vtkIdTypeArray(np.column_stack(([1]*n, range(n))).reshape((2*n,)).astype('i8')))&#xA;ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_VERTEX]*n).astype('u1'))&#xA;samples.VTKObject.SetCells(ct, co, ca)&#xA;samples.Points = dsa.numpy_support.numpy_to_vtk(s, deep=1)&#xA;&#xA;output.VTKObject.ShallowCopy(samples.VTKObject)&#xA;ccode.Cleanup()&#xA;"
+        panel_visibility="advanced">
+        <Hints>
+         <Widget type="multi_line"/>
+       </Hints>
+      <Documentation>This property contains the text of a python program that
+      the programmable source runs.</Documentation>
+      </StringVectorProperty>
+
+
+
+    </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>
