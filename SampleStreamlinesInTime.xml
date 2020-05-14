@@ -1,0 +1,78 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="SampleStreamlinesInTime" class="vtkPythonProgrammableFilter" label="Sample Streamlines In Time">
+
+      <Documentation
+        long_help="One sample at of each pathline at t (0 to 1) of the way along"
+        short_help="One sample at of each pathline at t (0 to 1) of the way along">
+      </Documentation>
+
+
+      <InputProperty
+        name="Input"
+        command="SetInputConnection">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+           <DataTypeDomain name="input_type">
+    <DataType value="vtkUnstructuredGrid"/>
+</DataTypeDomain>
+      </InputProperty>
+
+
+      <IntVectorProperty
+        name="nt"
+        label="nt"
+        initial_string="nt"
+        command="SetParameter"
+        animateable="1"
+        default_values="1"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <DoubleVectorProperty
+        name="t"
+        label="t"
+        initial_string="t"
+        command="SetParameter"
+        animateable="1"
+        default_values="0.5"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </DoubleVectorProperty>
+
+
+
+
+      <!-- Output data type: "vtkUnstructuredGrid" -->
+      <IntVectorProperty command="SetOutputDataSetType"
+                         default_values="4"
+                         name="OutputDataSetType"
+                         number_of_elements="1"
+                         panel_visibility="never">
+        <Documentation>The value of this property determines the dataset type
+        for the output of the programmable filter.</Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="Script"
+        command="SetScript"
+        number_of_elements="1"
+        default_values="import numpy as np&#xA;from vtk.numpy_interface import dataset_adapter as dsa&#xA;from math import ceil, floor&#xA;&#xA;sl = self.GetUnstructuredGridInput()    # The streamlines&#xA;nsl = dsa.WrapDataObject(sl)            # wrap with a Python interface&#xA;&#xA;itime = nsl.PointData['IntegrationTime']  # the time component of the streamlines&#xA;&#xA;nv = nsl.Cells[nsl.CellLocations]    # number of verts in each line&#xA;ns = nsl.CellLocations + 1           # index of first vertex in each line&#xA;ne = ns + nv                         # index one past the last vertex&#xA;&#xA;lines = [nsl.Cells[i:j] for i,j in zip(ns, ne)] # divide into distinct lines&#xA;                                                # lines[i] is a list of the ids of the&#xA;                                                # vertices that comprise each streamline&#xA;&#xA;# Get length (in integration time) of longest line.   Note - this assumes that the &#xA;# forward- and backward- integrations are combined into one streamline (see JoinStreamlines)&#xA;&#xA;mint = itime[lines[0][0]]&#xA;maxt = itime[lines[0][-1]]&#xA;maxlen = itime[lines[0][-1]] - itime[lines[0][0]]&#xA;if len(lines) &gt; 1:&#xA;  for i in range(1, len(lines)):&#xA;    mt = itime[lines[i][-1]] - itime[lines[i][0]]&#xA;    if mt &gt; maxlen:&#xA;      maxlen = mt;&#xA;    if mint &gt; itime[lines[i][0]]: mint = itime[lines[i][0]]&#xA;    if maxt &lt; itime[lines[i][-1]]: maxt = itime[lines[i][-1]]&#xA;&#xA;# dt is the distance between samples in integration time - nt samples distributed along longest line&#xA;&#xA;dt = (maxt - mint) / nt&#xA;&#xA;# destination arrays for streamline points and any point-dependent data - eg. orientation data&#xA;&#xA;iarrays = {'points': nsl.Points}    # initialize source arrays with input points&#xA;oarrays = {'points': []}            # initialize destination arrays with (empty) points&#xA;&#xA;for n in nsl.PointData.keys():      &#xA;  iarrays[n] = nsl.PointData[n]     # add input point data arrays to source arrays&#xA;  oarrays[n] = []                   # add empty destination arrays &#xA;&#xA;# for each sample time...&#xA;&#xA;for it in range(nt):&#xA;&#xA;  sample_t = mint + (it + t) * dt     # the point in time to interpolate at&#xA;&#xA;  for i,line in enumerate(lines):     # for each input line...&#xA;&#xA;    # if this sample time is in the range for the current line...&#xA;&#xA;    if sample_t &gt;= itime[line[0]] and sample_t &lt;= itime[line[-1]]:&#xA;&#xA;      # index of first elt greater than sample_x (or 0, in which case we use the last)&#xA;&#xA;      interval_end = np.argmax(itime[line] &gt; sample_t)      # linear search?&#xA;      if interval_end == 0: interval_end = len(line) - 1&#xA;&#xA;      # get indices of points and point-dependent data at either end of the interval&#xA;      endi = line[interval_end]&#xA;      starti = line[interval_end - 1]&#xA;&#xA;      # interpolant value in interval&#xA;      d = (sample_t - itime[starti]) / (itime[endi] - itime[starti])  # interpolant in interval&#xA;&#xA;      for n in iarrays:                 #   for each array we are interpolating...&#xA;        ia = iarrays[n]                 #     input array&#xA;        sv = ia[starti]                 #     start values&#xA;        ev = ia[endi]                   #     end values&#xA;        v  = sv + d*(ev - sv)           #     interpolation&#xA;        oarrays[n].append(v)&#xA;&#xA;# create an output vtkUnstructured data with the interpolated points and data&#xA;&#xA;ptsa = np.concatenate(oarrays['points']).reshape((-1, 3)).astype('f4')&#xA;oug = vtk.vtkUnstructuredGrid()&#xA;&#xA;op = vtk.vtkPoints()&#xA;op.SetNumberOfPoints(ptsa.shape[0])&#xA;&#xA;for i, p in enumerate(ptsa):&#xA;  op.InsertPoint(i, p[0], p[1], p[2])&#xA;&#xA;&#xA;oug.SetPoints(op)&#xA;&#xA;for n in oarrays:&#xA;  if n != 'points':&#xA;    if oarrays[n][0].__class__ == dsa.VTKArray:&#xA;      ncomp = len(oarrays[n][0])&#xA;      a = dsa.numpyTovtkDataArray(np.concatenate(oarrays[n]).reshape((-1, ncomp)))&#xA;    else:&#xA;      a = dsa.numpyTovtkDataArray(oarrays[n])&#xA;    a.SetName(n)&#xA;    oug.GetPointData().AddArray(a)&#xA;&#xA;ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_VERTEX]*oug.GetNumberOfPoints()).astype('u1'))&#xA;co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.array(range(0, 2*oug.GetNumberOfPoints(), 2)))&#xA;&#xA;ca = vtk.vtkCellArray()&#xA;for i in range(oug.GetNumberOfPoints()):&#xA;  ca.InsertNextCell(1, [i])&#xA;&#xA;oug.SetCells(ct, co, ca)&#xA;&#xA;self.GetUnstructuredGridOutput().ShallowCopy(oug)&#xA;"
+        panel_visibility="advanced">
+        <Hints>
+         <Widget type="multi_line"/>
+       </Hints>
+      <Documentation>This property contains the text of a python program that
+      the programmable source runs.</Documentation>
+      </StringVectorProperty>
+
+
+
+    </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>

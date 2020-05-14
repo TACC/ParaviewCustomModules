@@ -1,0 +1,192 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="MetropolisHastingsSampler" class="vtkPythonProgrammableFilter" label="Metropolis Hastings Sampler">
+
+      <Documentation
+        long_help="The MH Sampler uses a Markov Chain algorithm to produces samples of a volumetric dataset in the vicinity of a particular chosen data value.   The probability density is derived from an underlying scalar field as the difference of the scalar field from the target value, scaled to range from 0 to 1 in an interval given by the 'kernelwidth' parameter, raised to a power given by the 'power' parameter.  'allabove' and 'allbelow' can be set to assign a probability of 1 in the data space above (or below) the target value."
+        short_help="The MH Sampler uses a Markov Chain algorithm to produces samples of a volumetric dataset in the vicinity of a particular chosen data value.   The probability density is derived from an underlying scalar field as the difference of the scalar field from the target value, scaled to range from 0 to 1 in an interval given by the 'kernelwidth' parameter, raised to a power given by the 'power' parameter.  'allabove' and 'allbelow' can be set to assign a probability of 1 in the data space above (or below) the target value.">
+      </Documentation>
+
+
+      <InputProperty
+        name="Input"
+                    clean_command="RemoveAllInputs"
+            command="AddInputConnection"
+            multiple_input="1">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+           <DataTypeDomain name="input_type">
+  <DataType value="vtkPolyData"/>
+  <DataType value="vtkUnstructuredGrid"/>
+  <DataType value="vtkImageData"/>
+</DataTypeDomain>
+      </InputProperty>
+
+
+      <IntVectorProperty
+        name="allabove"
+        label="allabove"
+        initial_string="allabove"
+        command="SetParameter"
+        animateable="1"
+        default_values="0"
+        number_of_elements="1">
+        <BooleanDomain name="bool" />
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <IntVectorProperty
+        name="allbelow"
+        label="allbelow"
+        initial_string="allbelow"
+        command="SetParameter"
+        animateable="1"
+        default_values="0"
+        number_of_elements="1">
+        <BooleanDomain name="bool" />
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="arrayName"
+        label="arrayName"
+        initial_string="arrayName"
+        command="SetParameter"
+        animateable="1"
+        default_values="RTData"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </StringVectorProperty>
+
+
+      <IntVectorProperty
+        name="asscale"
+        label="asscale"
+        initial_string="asscale"
+        command="SetParameter"
+        animateable="1"
+        default_values="-1"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <DoubleVectorProperty
+        name="kernelwidth"
+        label="kernelwidth"
+        initial_string="kernelwidth"
+        command="SetParameter"
+        animateable="1"
+        default_values="10.0"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </DoubleVectorProperty>
+
+
+      <IntVectorProperty
+        name="nmisses"
+        label="nmisses"
+        initial_string="nmisses"
+        command="SetParameter"
+        animateable="1"
+        default_values="1000"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <IntVectorProperty
+        name="nsamples"
+        label="nsamples"
+        initial_string="nsamples"
+        command="SetParameter"
+        animateable="1"
+        default_values="1000"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <DoubleVectorProperty
+        name="power"
+        label="power"
+        initial_string="power"
+        command="SetParameter"
+        animateable="1"
+        default_values="1.0"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </DoubleVectorProperty>
+
+
+      <IntVectorProperty
+        name="sscale"
+        label="sscale"
+        initial_string="sscale"
+        command="SetParameter"
+        animateable="1"
+        default_values="100"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <IntVectorProperty
+        name="starts"
+        label="starts"
+        initial_string="starts"
+        command="SetParameter"
+        animateable="1"
+        default_values="100"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <DoubleVectorProperty
+        name="target"
+        label="target"
+        initial_string="target"
+        command="SetParameter"
+        animateable="1"
+        default_values="99999.0"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </DoubleVectorProperty>
+
+
+
+
+      <!-- Output data type: "vtkUnstructuredGrid" -->
+      <IntVectorProperty command="SetOutputDataSetType"
+                         default_values="4"
+                         name="OutputDataSetType"
+                         number_of_elements="1"
+                         panel_visibility="never">
+        <Documentation>The value of this property determines the dataset type
+        for the output of the programmable filter.</Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="Script"
+        command="SetScript"
+        number_of_elements="1"
+        default_values="import vtk&#xA;import random&#xA;import numpy as np&#xA;from vtk.numpy_interface import dataset_adapter as dsa&#xA;&#xA;np.random.seed(12345)&#xA;&#xA;class Interpolator:&#xA;&#xA;  def __init__(self, dset):&#xA;    self.dset = dset.VTKObject&#xA;    self.xyz = [-10000, -20000, -30000]&#xA;    self.pids = vtk.reference([0]*10)&#xA;    self.nverts = -1&#xA;    self.pc = [0]*3&#xA;    self.wts = [0]*10&#xA;    self.gc = vtk.vtkGenericCell()&#xA;    self.sid = 2&#xA;    if self.dset.IsA('vtkUnstructuredGrid'):&#xA;      self.locator = vtk.vtkCellTreeLocator()&#xA;      self.locator.SetDataSet(dset.VTKObject)&#xA;      self.locator.BuildLocator()&#xA;      self.is_vtu = True&#xA;    else:&#xA;      self.is_vtu = False&#xA;&#xA;  def Locate(self, xyz):&#xA;    if self.is_vtu:&#xA;      cid = self.locator.FindCell(xyz, 0.0, self.gc, self.pc, self.wts)&#xA;      if cid &lt; 0 or min(self.wts[:4]) &lt; 0 or max(self.wts[:4]) &gt; 1:&#xA;        self.xyz = []&#xA;        return False&#xA;      idl = vtk.vtkIdList()&#xA;      self.dset.GetCellPoints(cid, idl)&#xA;      self.ids = [idl.GetId(i) for i in range(idl.GetNumberOfIds())]&#xA;    else:&#xA;      vox = self.dset.FindAndGetCell(xyz, None, 0, 0.0, vtk.reference(self.sid), self.pc, self.wts)&#xA;      if vox == None:&#xA;        self.xyz = []&#xA;        return None&#xA;      self.ids = [vox.GetPointId(i) for i in range(vox.GetNumberOfPoints())]&#xA;    self.xyz = xyz&#xA;    return True&#xA;&#xA;  def Interpolate(self, xyz, a):&#xA;    if list(xyz) != list(self.xyz):&#xA;      if not self.Locate(xyz):&#xA;        return None&#xA;    if len(a.shape) == 1:&#xA;      return sum(self.wts[i]*a[self.ids[i]] for i in range(len(self.ids)))&#xA;    else:&#xA;      return [sum(self.wts[i]*a[self.ids[i]][j] for i in range(len(self.ids))) for j in range(a.shape[1])]&#xA;&#xA;class Samples:&#xA;&#xA;  def __init__(self, dset):&#xA;    self.points = []&#xA;    self.vars = []&#xA;    self.I = []&#xA;    self.V = []&#xA;    self.Q = []&#xA;    for i in dset.PointData.keys():&#xA;      self.vars.append([i, dset.PointData[i], []])&#xA;&#xA;  def num(self):&#xA;    return len(self.points)&#xA;&#xA;  def add(self, I, p, v, q, i):&#xA;    self.points.append(p)&#xA;    self.V.append(v)&#xA;    self.Q.append(q)&#xA;    self.I.append(i)&#xA;    for i in self.vars:&#xA;      value = I.Interpolate(p, i[1])&#xA;      if value == None:&#xA;        print('oops')&#xA;      i[2].append(value)&#xA;&#xA;  def stuff_vtu(self, outpt):&#xA;    outpt.SetPoints(dsa.VTKArray(np.array(self.points).astype('f4')))&#xA;    outpt.PointData.append(dsa.VTKArray(np.array(self.V).astype('f4')), 'V')&#xA;    outpt.PointData.append(dsa.VTKArray(np.array(self.Q).astype('f4')), 'Q')&#xA;    outpt.PointData.append(dsa.VTKArray(np.array(self.I).astype('f4')), 'I')&#xA;    ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_VERTEX]*outpt.GetNumberOfPoints()).astype('u1'))&#xA;    co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.array(range(0, 2*outpt.GetNumberOfPoints(), 2)))&#xA;    ca = vtk.vtkCellArray()&#xA;    for i in range(outpt.GetNumberOfPoints()):&#xA;      ca.InsertNextCell(1, [i])&#xA;    outpt.VTKObject.SetCells(ct, co, ca)&#xA;    for v in self.vars:&#xA;      outpt.PointData.append(dsa.VTKArray(np.array(v[2]).astype('f4')), v[0])&#xA;&#xA;volume = inputs[0]&#xA;&#xA;print('start')&#xA;&#xA;mx,MX,my,MY,mz,MZ = volume.VTKObject.GetBounds()&#xA;ll = np.array([mx,my,mz])&#xA;ur = np.array([MX,MY,MZ])&#xA;diagonal = ur - ll&#xA;&#xA;if len(inputs) &gt; 1:&#xA;  points = inputs[1].GetPoints()&#xA;else:&#xA;  i = int(starts)&#xA;  points = [[ll[i] + random.random()*diagonal[i] for i in range(3)] for j in range(starts)]&#xA;&#xA;if asscale == -1:&#xA;  asscale = np.linalg.norm(diagonal) / sscale&#xA;&#xA;volume = inputs[0]&#xA;if volume.VTKObject.IsA('vtkImageData'):&#xA;  is_vtu = False&#xA;elif volume.VTKObject.IsA('vtkUnstructuredGrid'):&#xA;  is_vtu = True&#xA;else:&#xA;  print('wha?')&#xA;  return&#xA;&#xA;if arrayName == &quot;&quot; and len(volume.PointData.keys()) &gt; 1:&#xA;  print('need to know what variable to operate on')&#xA;  return &#xA;&#xA;if arrayName == -1:&#xA;  array = volume.GetPointData().GetArray(0)&#xA;  arrayName = &quot;none&quot;&#xA;elif arrayName in volume.PointData.keys():&#xA;  array = volume.PointData[arrayName]&#xA;else:&#xA;  print('can\'t find requested data array:', arrayName)&#xA;  print(volume.PointData.keys())&#xA;  return &#xA;&#xA;if target == 99999.0:&#xA;  mv = np.min(array)&#xA;  MV = np.max(array)&#xA;  # target = (mv + MV) / 2.0&#xA;  target = MV&#xA;&#xA;if allabove:&#xA;  def P(a):&#xA;    if a == None: return 0.0&#xA;    if a &gt; target: return 1.0&#xA;    d = target - a&#xA;    if d &gt; kernelwidth: return 0.0&#xA;    else: return pow(1.0 - (d / kernelwidth), power)&#xA;elif allbelow:&#xA;  def P(a):&#xA;    if a == None: return 0.0&#xA;    if a &lt; target: return 1.0&#xA;    d = a - target&#xA;    if d &gt; kernelwidth: return 0.0&#xA;    else: return pow(1.0 - (d / kernelwidth), power)&#xA;else:&#xA;  def P(a):&#xA;    if a == None: &#xA;      return 0.0&#xA;    d = target - a&#xA;    if d &lt; 0: d = -d&#xA;    if d &gt; kernelwidth: &#xA;      return 0.0&#xA;    else:&#xA;      return pow(1.0 - (d / kernelwidth), power)&#xA;&#xA;samples = Samples(volume)&#xA;interp  = Interpolator(volume)&#xA;&#xA;initial_points = []&#xA;initial_pqs = []&#xA;&#xA;current_points = []&#xA;current_pqs = []&#xA;&#xA;indx = 0&#xA;for i, p in enumerate(points):&#xA;  if interp.Locate(p):&#xA;    v = interp.Interpolate(p, array)&#xA;    q = P(v)&#xA;    if q &gt; 0.0:&#xA;      initial_points.append(p)&#xA;      initial_pqs.append(q)&#xA;      # samples.add(interp, p, v, q, indx)&#xA;      # indx = indx + 1&#xA;&#xA;if len(initial_points) == 0:&#xA;  pqs = np.vectorize(P)(array)&#xA;  selectors = np.vectorize(lambda x: x &gt; 0.9)(pqs)&#xA;  initial_points = volume.GetPoints()[selectors]&#xA;  initial_pqs = pqs[selectors]&#xA;  # for (p, v) in zip(initial_points, initial_pqs):&#xA;    # samples.add(interp, p, v, q, indx)&#xA;    # indx = indx + 1&#xA;&#xA;print(arrayName, &quot; initial points: &quot;, len(initial_points))&#xA;&#xA;current_points = list(initial_points)&#xA;current_pqs = list(initial_pqs)&#xA;&#xA;misses = [0]*len(initial_points)&#xA;&#xA;done = False&#xA;indx = 0&#xA;&#xA;loop_count = 0&#xA;while not done and samples.num() &lt; nsamples:&#xA;  loop_count = loop_count + 1&#xA;  if loop_count &gt; 100000:&#xA;    print(&quot;broke on total loop count&quot;)&#xA;    done = True&#xA;  if misses[indx] &gt;= nmisses:&#xA;    misses[indx] = 0&#xA;    current_points[indx] = initial_points[indx]&#xA;    current_pqs[indx] = initial_pqs[indx]&#xA;  cpoint = current_points[indx] + np.random.normal(loc=0.0, scale=asscale, size=3)&#xA;  cv = interp.Interpolate(cpoint, array)&#xA;  cq = P(cv)&#xA;  if cq &gt; 0.0:&#xA;    if cq &gt;= current_pqs[indx]:&#xA;      samples.add(interp, cpoint, cv, cq, indx)&#xA;      misses[indx] = 0&#xA;    else:&#xA;      u = np.random.rand()&#xA;      if u &lt; cq/current_pqs[indx]:&#xA;        samples.add(interp, cpoint, cv, cq, indx)&#xA;        misses[indx] = 0&#xA;      else:&#xA;        misses[indx] = misses[indx] + 1&#xA;  current_points[indx] = list(cpoint)&#xA;  current_pqs[indx] = cq&#xA;  indx = indx + 1&#xA;  if indx &gt;= len(misses):&#xA;    indx = 0&#xA;&#xA;samples.stuff_vtu(output)&#xA;return&#xA;"
+        panel_visibility="advanced">
+        <Hints>
+         <Widget type="multi_line"/>
+       </Hints>
+      <Documentation>This property contains the text of a python program that
+      the programmable source runs.</Documentation>
+      </StringVectorProperty>
+
+
+
+    </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>

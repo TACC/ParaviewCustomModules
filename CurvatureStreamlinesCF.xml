@@ -1,0 +1,66 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="CurvatureStreamlines" class="vtkPythonProgrammableFilter" label="Curvature Streamlines">
+
+      <Documentation
+        long_help="Create curvature vector for streamlines"
+        short_help="Create curvature vector for streamlines">
+      </Documentation>
+
+
+      <InputProperty
+        name="Input"
+        command="SetInputConnection">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+           <DataTypeDomain name="input_type">
+    <DataType value="vtkUnstructuredGrid"/>
+</DataTypeDomain>
+      </InputProperty>
+
+
+      <IntVectorProperty
+        name="stepsize"
+        label="stepsize"
+        initial_string="stepsize"
+        command="SetParameter"
+        animateable="1"
+        default_values="100000"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+
+
+      <!-- Output data type: "vtkUnstructuredGrid" -->
+      <IntVectorProperty command="SetOutputDataSetType"
+                         default_values="4"
+                         name="OutputDataSetType"
+                         number_of_elements="1"
+                         panel_visibility="never">
+        <Documentation>The value of this property determines the dataset type
+        for the output of the programmable filter.</Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="Script"
+        command="SetScript"
+        number_of_elements="1"
+        default_values="import numpy as np&#xA;from vtk.numpy_interface import dataset_adapter as dsa&#xA;from math import ceil&#xA;&#xA;isl = self.GetUnstructuredGridInput()&#xA;osl = self.GetUnstructuredGridOutput()&#xA;&#xA;nisl = dsa.WrapDataObject(isl)&#xA;nosl = dsa.WrapDataObject(osl)&#xA;&#xA;osl.SetPoints(isl.GetPoints())&#xA;for i in range(isl.GetPointData().GetNumberOfArrays()):&#xA;  osl.GetPointData().AddArray(isl.GetPointData().GetArray(i))&#xA;&#xA;cell_locations = nisl.GetCellLocations()&#xA;&#xA;lines = []&#xA;cells = nisl.Cells&#xA;while (len(cells)) &gt; 0:&#xA;  n = cells[0]&#xA;  s = 1&#xA;  e = n + 1&#xA;  lines.append(cells[s:e])&#xA;  cells = cells[n+1:]&#xA;&#xA;if 'arclen' in nisl.PointData.keys():&#xA;  arclen = nisl.PointData['arclen']&#xA;else:&#xA;  arclen = np.zeros(nisl.GetNumberOfPoints())&#xA;  nosl.PointData.append(arclen, 'arclen')&#xA;&#xA;  for line in lines:&#xA;    points = nisl.Points[line]&#xA;    seglen = np.linalg.norm(points[1:] - points[:-1], axis=1)&#xA;    arclen[line] = np.concatenate(([0], np.cumsum(seglen)))&#xA;&#xA;curvature = np.zeros(len(nisl.Points)*3).reshape((-1, 3))&#xA;binormal = np.zeros(len(nisl.Points)*3).reshape((-1, 3))&#xA;&#xA;for indx,line in enumerate(lines):&#xA;  print('line', line)&#xA;  line_points = nisl.Points[line]&#xA;  print('points', line_points)&#xA;  line_arclen = arclen[line]&#xA;  llen = line_arclen[-1]&#xA;  nsteps = ceil(llen / stepsize)&#xA;  if nsteps &lt; 3:&#xA;    nsteps = 3&#xA;  print('nsteps', nsteps)&#xA;  samples = np.linspace(0.0, llen, nsteps)&#xA;  print('samples', samples)&#xA;  sampled_points = np.column_stack([np.interp(samples, line_arclen, line_points[:,i]) for i in range(3)])&#xA;  vectors = sampled_points[1:] - sampled_points[:-1]&#xA;  print('vectors', vectors)&#xA;  d = np.linalg.norm(vectors, axis=1)&#xA;  d = np.where(d == 0.0, 1.0, d)&#xA;  vectors = vectors / d[:,np.newaxis]&#xA;  crosses = np.cross(vectors[1:], vectors[:-1], axis=1)&#xA;  crosses = np.concatenate(([crosses[0]], crosses, [crosses[-1]]))&#xA;  crosses = np.column_stack([np.interp(line_arclen, samples, crosses[:,i]) for i in range(3)])&#xA;  binorm = 0.5 * (vectors[1:] - vectors[:-1])&#xA;  binorm = np.concatenate(([binorm[0]], binorm, [binorm[-1]]))&#xA;  binorm = np.column_stack([np.interp(line_arclen, samples, binorm[:,i]) for i in range(3)])&#xA;  binormal[line] = binorm&#xA;  curvature[line] = crosses&#xA;&#xA;nosl.PointData.append(curvature, 'curvature')&#xA;nosl.PointData.append(binormal, 'binormal')&#xA;nosl.CellData.append(np.arange(len(binormal)), 'cellID')&#xA;"
+        panel_visibility="advanced">
+        <Hints>
+         <Widget type="multi_line"/>
+       </Hints>
+      <Documentation>This property contains the text of a python program that
+      the programmable source runs.</Documentation>
+      </StringVectorProperty>
+
+
+
+    </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>

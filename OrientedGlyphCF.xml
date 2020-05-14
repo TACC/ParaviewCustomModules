@@ -1,0 +1,140 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="OrientedGlyph" class="vtkPythonProgrammableFilter" label="Oriented Glyph">
+
+      <Documentation
+        long_help="Place a glyph at each point using two vectors for orientation"
+        short_help="Place a glyph at each point using two vectors for orientation">
+      </Documentation>
+
+
+      <InputProperty
+        name="Input"
+                    clean_command="RemoveAllInputs"
+            command="AddInputConnection"
+            multiple_input="1">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+           <DataTypeDomain name="input_type">
+    <DataType value="vtkUnstructuredGrid"/>
+</DataTypeDomain>
+      </InputProperty>
+
+
+      <IntVectorProperty
+        name="dbg"
+        label="dbg"
+        initial_string="dbg"
+        command="SetParameter"
+        animateable="1"
+        default_values="999"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="forward"
+        label="forward"
+        initial_string="forward"
+        command="SetParameter"
+        animateable="1"
+        default_values="velocity"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </StringVectorProperty>
+
+
+      <DoubleVectorProperty
+        name="scale"
+        label="scale"
+        initial_string="scale"
+        command="SetParameter"
+        animateable="1"
+        default_values="1.0"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </DoubleVectorProperty>
+
+
+      <StringVectorProperty
+        name="up"
+        label="up"
+        initial_string="up"
+        command="SetParameter"
+        animateable="1"
+        default_values="Normals"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </StringVectorProperty>
+
+
+      <DoubleVectorProperty
+        name="xscale"
+        label="xscale"
+        initial_string="xscale"
+        command="SetParameter"
+        animateable="1"
+        default_values="1.0"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </DoubleVectorProperty>
+
+
+      <DoubleVectorProperty
+        name="yscale"
+        label="yscale"
+        initial_string="yscale"
+        command="SetParameter"
+        animateable="1"
+        default_values="1.0"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </DoubleVectorProperty>
+
+
+      <DoubleVectorProperty
+        name="zscale"
+        label="zscale"
+        initial_string="zscale"
+        command="SetParameter"
+        animateable="1"
+        default_values="1.0"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </DoubleVectorProperty>
+
+
+
+
+      <!-- Output data type: "vtkUnstructuredGrid" -->
+      <IntVectorProperty command="SetOutputDataSetType"
+                         default_values="4"
+                         name="OutputDataSetType"
+                         number_of_elements="1"
+                         panel_visibility="never">
+        <Documentation>The value of this property determines the dataset type
+        for the output of the programmable filter.</Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="Script"
+        command="SetScript"
+        number_of_elements="1"
+        default_values="import numpy as np&#xA;from time import time&#xA;from vtk.numpy_interface import dataset_adapter as dsa&#xA;from vtk.util import numpy_support as ns&#xA;&#xA;ipoints = inputs[0]&#xA;number_of_glyphs = ipoints.GetNumberOfPoints()&#xA;&#xA;glyph = inputs[1]&#xA;&#xA;glyph_points     = [scale*xscale, scale*yscale, scale*zscale] * glyph.Points&#xA;points_per_glyph = glyph_points.shape[0]&#xA;&#xA;cells_per_glyph  = len(glyph.CellTypes)&#xA;&#xA;if forward not in ipoints.PointData.keys():&#xA;  print('can\'t find forward array')&#xA;  return&#xA;&#xA;U = ipoints.PointData[forward]&#xA;&#xA;if up not in ipoints.PointData.keys():&#xA;  print('can\'t find up array')&#xA;  return&#xA;&#xA;V = ipoints.PointData[up]&#xA;&#xA;W = dsa.VTKArray(np.cross(U, V))&#xA;&#xA;l = np.linalg.norm(U, axis=1)&#xA;U = U / np.where(l == 0, 1.0, l)&#xA;l = np.linalg.norm(U, axis=1)&#xA;V = V / np.where(l == 0, 1.0, l)&#xA;l = np.linalg.norm(W, axis=1)&#xA;W = W / np.where(l == 0, 1.0, l)&#xA;&#xA;P = ipoints.Points&#xA;&#xA;p = P[0]&#xA;u = U[0]&#xA;v = V[0]&#xA;w = W[0]&#xA;&#xA;xpts = glyph_points[:,0][:,np.newaxis]&#xA;ypts = glyph_points[:,1][:,np.newaxis]&#xA;zpts = glyph_points[:,2][:,np.newaxis]&#xA;&#xA;opoints = []&#xA;for i,p,u,v,w in zip(range(len(P)), P, U, V, W):&#xA;  opoints.append(p + xpts*u + ypts*v + zpts*w)&#xA;&#xA;opolys = [glyph.Cells.reshape(-1,4)]&#xA;&#xA;ijk = glyph.Cells.reshape((-1,4))[:,1:4]&#xA;&#xA;for i in range(1, len(P)):&#xA;  nijk = np.column_stack(([3]*ijk.shape[0], ijk + i*points_per_glyph))&#xA;  opolys.append(nijk)&#xA;&#xA;opoints = dsa.numpyTovtkDataArray(np.vstack(opoints))&#xA;&#xA;ids = [np.array([i]*points_per_glyph) for i in range(len(P))]&#xA;ids = dsa.numpyTovtkDataArray(np.vstack(ids).flatten(), name='ID')&#xA;&#xA;oug = vtk.vtkUnstructuredGrid()&#xA;&#xA;pts = vtk.vtkPoints()&#xA;pts.SetData(opoints)&#xA;oug.SetPoints(pts)&#xA;&#xA;ct = np.hstack([glyph.CellTypes for i in range(number_of_glyphs)])&#xA;co = np.hstack([glyph.CellLocations + i*len(glyph.Cells) for i in range(number_of_glyphs)])&#xA;opolys = np.hstack(opolys).astype('i8')&#xA;&#xA;ct = dsa.numpyTovtkDataArray(ct)&#xA;co = dsa.numpy_support.numpy_to_vtkIdTypeArray(co)&#xA;opolys = ns.numpy_to_vtkIdTypeArray(opolys)&#xA;&#xA;ca = vtk.vtkCellArray()&#xA;ca.SetCells(number_of_glyphs*cells_per_glyph, opolys)&#xA;&#xA;oug.SetCells(ct, co, ca)&#xA;oug.GetPointData().AddArray(ids)&#xA;&#xA;oug.GetPointData().AddArray(dsa.numpyTovtkDataArray(np.vstack([glyph.PointData['Normals'] for i in range(number_of_glyphs)]), name='Normals'))&#xA;&#xA;if 'Texture Coordinates' in glyph.PointData.keys():  &#xA;  a = np.vstack([glyph.PointData['Texture Coordinates'] for&#x9; i in range(len(ipoints.Points))])&#xA;  oug.GetPointData().SetTCoords(dsa.numpyTovtkDataArray(a))&#xA;&#xA;for n in ipoints.PointData.keys():&#xA;  if n != 'Normals':&#xA;    a = [[ipoints.PointData[n][i]]*points_per_glyph for i in range(number_of_glyphs)]&#xA;    oug.GetPointData().AddArray(dsa.numpyTovtkDataArray(np.concatenate(a), name=n))&#xA;&#xA;self.GetUnstructuredGridOutput().Initialize()&#xA;self.GetUnstructuredGridOutput().ShallowCopy(oug)&#xA;&#xA;return&#xA;"
+        panel_visibility="advanced">
+        <Hints>
+         <Widget type="multi_line"/>
+       </Hints>
+      <Documentation>This property contains the text of a python program that
+      the programmable source runs.</Documentation>
+      </StringVectorProperty>
+
+
+
+    </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>

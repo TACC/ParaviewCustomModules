@@ -1,0 +1,66 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="RandomSampleSurface" class="vtkPythonProgrammableFilter" label="Sample Surface">
+
+      <Documentation
+        long_help="Sample a surface randomly"
+        short_help="Sample a surface randomly">
+      </Documentation>
+
+
+      <InputProperty
+        name="Input"
+        command="SetInputConnection">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+           <DataTypeDomain name="input_type">
+    <DataType value="vtkPolyData"/>
+</DataTypeDomain>
+      </InputProperty>
+
+
+      <IntVectorProperty
+        name="nsamples"
+        label="nsamples"
+        initial_string="nsamples"
+        command="SetParameter"
+        animateable="1"
+        default_values="100"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+
+
+      <!-- Output data type: "vtkUnstructuredGrid" -->
+      <IntVectorProperty command="SetOutputDataSetType"
+                         default_values="4"
+                         name="OutputDataSetType"
+                         number_of_elements="1"
+                         panel_visibility="never">
+        <Documentation>The value of this property determines the dataset type
+        for the output of the programmable filter.</Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="Script"
+        command="SetScript"
+        number_of_elements="1"
+        default_values="import random&#xA;from vtk.numpy_interface import dataset_adapter as dsa&#xA;from numpy import cross, ascontiguousarray, array, column_stack, arange&#xA;from numpy.linalg import norm&#xA;&#xA;inp = inputs[0]&#xA;&#xA;tf = vtk.vtkTriangleFilter()&#xA;tf.SetInputData(inp.VTKObject)&#xA;tf.Update()&#xA;&#xA;dobj = dsa.WrapDataObject(tf.GetOutput())&#xA;&#xA;nCells = dobj.GetNumberOfCells()&#xA;&#xA;tris = dobj.GetPolygons().reshape((-1, 4))[:,1:]&#xA;&#xA;points = dobj.GetPoints()&#xA;&#xA;p0 = points[tris[:,0]]&#xA;p1 = points[tris[:,1]]&#xA;p2 = points[tris[:,2]]&#xA;&#xA;areas = norm(cross(p1-p0, p2-p0), axis=1)/2.0&#xA;area_per_sample = sum(areas) / nsamples&#xA;samples_per_triangle = [(a / area_per_sample) for a in areas]&#xA;samples_per_triangle = [(int(i) + 1) if (random.random() &lt; (i - int(i))) else int(i) for i in samples_per_triangle]&#xA;sampled_triangles = [[i]*j for i,j in enumerate(samples_per_triangle)]&#xA;sampled_triangles = [j for i in sampled_triangles for j in i]&#xA;selected_triangles = tris[sampled_triangles,:]&#xA;&#xA;p = points[selected_triangles[:,0]]&#xA;q = points[selected_triangles[:,1]]&#xA;r = points[selected_triangles[:,2]]&#xA;&#xA;qp = q - p&#xA;rp = r - p&#xA;&#xA;unit = [[random.random(), random.random()] for i in range(len(selected_triangles))]&#xA;unit = [u if (u[0]+u[1]) &lt; 1 else [1-u[0], 1-u[1]] for u in unit]&#xA;&#xA;v = [u[0]*q + u[1]*r for u,q,r in zip(unit, qp, rp)]&#xA;samples = p + v&#xA;&#xA;output.SetPoints(dsa.VTKArray(samples))&#xA;"
+        panel_visibility="advanced">
+        <Hints>
+         <Widget type="multi_line"/>
+       </Hints>
+      <Documentation>This property contains the text of a python program that
+      the programmable source runs.</Documentation>
+      </StringVectorProperty>
+
+
+
+    </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>

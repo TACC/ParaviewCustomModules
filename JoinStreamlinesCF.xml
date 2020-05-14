@@ -1,0 +1,66 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="JoinStreamlines" class="vtkPythonProgrammableFilter" label="Join Streamlines">
+
+      <Documentation
+        long_help="Join forward and backward fragments of streamlines.   Set flag to 0 to zero the integration time at the seed points, 1 to start each streamline at integrationTime = 0"
+        short_help="Join forward and backward fragments of streamlines.   Set flag to 0 to zero the integration time at the seed points, 1 to start each streamline at integrationTime = 0">
+      </Documentation>
+
+
+      <InputProperty
+        name="Input"
+        command="SetInputConnection">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+           <DataTypeDomain name="input_type">
+    <DataType value="vtkPolyData"/>
+</DataTypeDomain>
+      </InputProperty>
+
+
+      <IntVectorProperty
+        name="flag"
+        label="flag"
+        initial_string="flag"
+        command="SetParameter"
+        animateable="1"
+        default_values="0"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+
+
+      <!-- Output data type: "vtkUnstructuredGrid" -->
+      <IntVectorProperty command="SetOutputDataSetType"
+                         default_values="4"
+                         name="OutputDataSetType"
+                         number_of_elements="1"
+                         panel_visibility="never">
+        <Documentation>The value of this property determines the dataset type
+        for the output of the programmable filter.</Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="Script"
+        command="SetScript"
+        number_of_elements="1"
+        default_values="import numpy as np&#xA;from vtk.numpy_interface import dataset_adapter as dsa&#xA;&#xA;sl = self.GetPolyDataInput()&#xA;nsl = dsa.WrapDataObject(sl)&#xA;&#xA;osl = vtk.vtkUnstructuredGrid()&#xA;&#xA;osl.SetPoints(sl.GetPoints())&#xA;for i in range(sl.GetPointData().GetNumberOfArrays()):&#xA;  osl.GetPointData().AddArray(sl.GetPointData().GetArray(i))&#xA;&#xA;arclen = np.zeros(len(nsl.Points))&#xA;&#xA;sids = nsl.CellData['SeedIds']&#xA;unique_sids = np.unique(sids)&#xA;&#xA;polylines = []&#xA;idlists = [vtk.vtkIdList() for i in range(2)]&#xA;&#xA;if 'IntegrationTime' not in nsl.PointData.keys() or 'Normals' not in nsl.PointData.keys():&#xA;  print(&quot;need integration time and Normals variables&quot;)&#xA;  return&#xA;&#xA;for indx, seed in enumerate(unique_sids):&#xA;  parts = np.where(sids == seed)[0]&#xA;  sl.GetCellPoints(parts[0], idlists[0])&#xA;  w0 = [idlists[0].GetId(i) for i in range(idlists[0].GetNumberOfIds())]&#xA;  if len(parts) == 2:&#xA;    sl.GetCellPoints(parts[1], idlists[1])&#xA;    w1 = [idlists[1].GetId(i) for i in range(1, idlists[1].GetNumberOfIds())]&#xA;    nsl.PointData['Normals'][w1] = 0 - nsl.PointData['Normals'][w1]&#xA;    t0 = nsl.PointData['IntegrationTime'][w0[-1]]&#xA;    t1 = nsl.PointData['IntegrationTime'][w1[-1]]&#xA;    if t0 &gt; t1:&#xA;      tmin = t1&#xA;      ids = w1[::-1] + w0&#xA;    else:&#xA;      tmin = t0&#xA;      nsl.PointData['Normals'][w0] = 0 - nsl.PointData['Normals'][w0]&#xA;      ids = w0[::-1] + w1&#xA;  else:&#xA;    ids = w0&#xA;  if flag:&#xA;    nsl.PointData['IntegrationTime'][ids]  = nsl.PointData['IntegrationTime'][ids] - tmin&#xA;  polylines.append(ids)&#xA;  p = nsl.Points[ids]&#xA;  pv = p[1:] - p[:-1]&#xA;  l = np.linalg.norm(pv, axis=1)&#xA;  arclen[ids] = np.hstack(([0], np.cumsum(l)))&#xA;&#xA;ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_POLY_LINE]*len(polylines)).astype('u1'))&#xA;line_lengths = [len(p)+1 for p in polylines]  # number of vertices + 1 for count&#xA;co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.hstack(([0], np.cumsum(line_lengths)[:-1])).astype('i8'))&#xA;&#xA;ca = vtk.vtkCellArray()&#xA;for pl in polylines:&#xA;  ca.InsertNextCell(len(pl), pl)&#xA;&#xA;osl.SetCells(ct, co, ca)&#xA;&#xA;cid = dsa.numpyTovtkDataArray(np.arange(len(polylines)).astype('i4'))&#xA;cid.SetName('cell id')&#xA;osl.GetCellData().AddArray(cid)&#xA;&#xA;al = dsa.numpyTovtkDataArray(arclen.astype('f4'))&#xA;al.SetName('arclen')&#xA;osl.GetPointData().AddArray(al)&#xA;&#xA;self.GetUnstructuredGridOutput().ShallowCopy(osl)&#xA;"
+        panel_visibility="advanced">
+        <Hints>
+         <Widget type="multi_line"/>
+       </Hints>
+      <Documentation>This property contains the text of a python program that
+      the programmable source runs.</Documentation>
+      </StringVectorProperty>
+
+
+
+    </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>

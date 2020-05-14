@@ -1,0 +1,68 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="DecimateStreamlines" class="vtkPythonProgrammableFilter" label="DecimateStreamlines">
+
+      <Documentation
+        long_help=""
+        short_help="">
+      </Documentation>
+
+
+      <InputProperty
+        name="Input"
+        command="SetInputConnection">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+           <DataTypeDomain name="input_type">
+  <DataType value="vtkPolyData"/>
+  <DataType value="vtkUnstructuredGrid"/>
+  <DataType value="vtkImageData"/>
+</DataTypeDomain>
+      </InputProperty>
+
+
+      <IntVectorProperty
+        name="factor"
+        label="factor"
+        initial_string="factor"
+        command="SetParameter"
+        animateable="1"
+        default_values="5"
+        number_of_elements="1">
+        <Documentation></Documentation>
+      </IntVectorProperty>
+
+
+
+
+      <!-- Output data type: "vtkUnstructuredGrid" -->
+      <IntVectorProperty command="SetOutputDataSetType"
+                         default_values="4"
+                         name="OutputDataSetType"
+                         number_of_elements="1"
+                         panel_visibility="never">
+        <Documentation>The value of this property determines the dataset type
+        for the output of the programmable filter.</Documentation>
+      </IntVectorProperty>
+
+
+      <StringVectorProperty
+        name="Script"
+        command="SetScript"
+        number_of_elements="1"
+        default_values="import vtk&#xA;import numpy as np&#xA;from vtk.numpy_interface import dataset_adapter as dsa&#xA;&#xA;inpt = inputs[0]&#xA;&#xA;cl = inpt.GetCellLocations()&#xA;ct = inpt.GetCellTypes()&#xA;cells = inpt.GetCells()&#xA;&#xA;ncl = []&#xA;ncells = []&#xA;remap = []&#xA;&#xA;while len(cells) &gt; 0:&#xA;  onids = cells[0]&#xA;  oids = cells[1:onids+1]&#xA;  nids = [oids[0]] + list(oids[factor:-1:factor]) + [oids[-1]]&#xA;  nnids = len(nids)&#xA;  ncell = [nnids] + list(range(len(remap), len(remap)+len(nids)))&#xA;  remap = remap + nids&#xA;  ncells = ncells + ncell&#xA;  cells = cells[onids+1:]&#xA;&#xA;new_points = inpt.GetPoints()[remap]&#xA;ncells = dsa.VTKArray(ncells).astype('i8')&#xA;ncl = dsa.VTKArray(np.array(ncl)).astype('i8')&#xA;&#xA;o = dsa.WrapDataObject(vtk.vtkUnstructuredGrid())&#xA;o.SetPoints(dsa.VTKArray(np.array(new_points).astype('f4')))&#xA;o.SetCells(ct, ncl, ncells)&#xA;&#xA;ipd = inpt.GetPointData()&#xA;opd = o.GetPointData()&#xA;for i in ipd.keys():&#xA;  opd.append(ipd[i][remap], i)&#xA;&#xA;icd = inpt.GetCellData()&#xA;ocd = o.GetCellData()&#xA;for i in icd.keys():&#xA;  ocd.append(icd[i], i)&#xA;&#xA;if 0 == 1:&#xA;  wrtr = vtk.vtkXMLUnstructuredGridWriter()&#xA;  wrtr.SetFileName('reduced.vtu')&#xA;  wrtr.SetInputData(o.VTKObject)&#xA;  wrtr.Write()&#xA;else:&#xA;  output.VTKObject.ShallowCopy(o.VTKObject)&#xA;"
+        panel_visibility="advanced">
+        <Hints>
+         <Widget type="multi_line"/>
+       </Hints>
+      <Documentation>This property contains the text of a python program that
+      the programmable source runs.</Documentation>
+      </StringVectorProperty>
+
+
+
+    </SourceProxy>
+ </ProxyGroup>
+</ServerManagerConfiguration>
