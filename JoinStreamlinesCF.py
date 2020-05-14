@@ -85,7 +85,7 @@ def RequestData():
 
   ct = dsa.numpyTovtkDataArray(np.array([vtk.VTK_POLY_LINE]*len(polylines)).astype('u1'))
   line_lengths = [len(p)+1 for p in polylines]  # number of vertices + 1 for count
-  co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.hstack(([0], np.cumsum(line_lengths)[:-1])))
+  co = dsa.numpy_support.numpy_to_vtkIdTypeArray(np.hstack(([0], np.cumsum(line_lengths)[:-1])).astype('i8'))
 
   ca = vtk.vtkCellArray()
   for pl in polylines:
