@@ -47,15 +47,16 @@ def RequestData():
     osl.GetPointData().AddArray(isl.GetPointData().GetArray(i))
 
   cell_locations = nisl.GetCellLocations()
-  
-  vPerL  = nisl.Cells[cell_locations]
-  starts = cell_locations + 1
-  ends   = starts + vPerL
 
   lines = []
-  for s,e in zip(starts, ends):
-    lines.append(nisl.Cells[s:e])
-
+  cells = nisl.Cells
+  while (len(cells)) > 0:
+    n = cells[0]
+    s = 1
+    e = n + 1
+    lines.append(cells[s:e])
+    cells = cells[n+1:]
+ 
   if 'arclen' in nisl.PointData.keys():
     arclen = nisl.PointData['arclen']
   else:
@@ -71,15 +72,20 @@ def RequestData():
   binormal = np.zeros(len(nisl.Points)*3).reshape((-1, 3))
 
   for indx,line in enumerate(lines):
+    print('line', line)
     line_points = nisl.Points[line]
+    print('points', line_points)
     line_arclen = arclen[line]
     llen = line_arclen[-1]
     nsteps = ceil(llen / stepsize)
     if nsteps < 3:
       nsteps = 3
+    print('nsteps', nsteps)
     samples = np.linspace(0.0, llen, nsteps)
+    print('samples', samples)
     sampled_points = np.column_stack([np.interp(samples, line_arclen, line_points[:,i]) for i in range(3)])
     vectors = sampled_points[1:] - sampled_points[:-1]
+    print('vectors', vectors)
     d = np.linalg.norm(vectors, axis=1)
     d = np.where(d == 0.0, 1.0, d)
     vectors = vectors / d[:,np.newaxis]
@@ -94,4 +100,5 @@ def RequestData():
 
   nosl.PointData.append(curvature, 'curvature')
   nosl.PointData.append(binormal, 'binormal')
+  nosl.CellData.append(np.arange(len(binormal)), 'cellID')
 
